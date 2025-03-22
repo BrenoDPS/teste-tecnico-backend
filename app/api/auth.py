@@ -21,8 +21,8 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
         raise HTTPException(
-            status_code=400,
-            detail="Email already registered"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email existente na base de dados"
         )
     
     # Cria o novo usuário
@@ -62,4 +62,4 @@ async def login_for_access_token(
 
 @router.get("/me", response_model=UserSchema)
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
-    return current_user 
+    return current_user

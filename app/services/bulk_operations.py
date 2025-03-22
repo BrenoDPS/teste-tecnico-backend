@@ -12,7 +12,7 @@ class BulkOperationsService:
         self.db = db
 
     async def bulk_create_vehicles(self, vehicles: BulkCreateVehicle) -> List[Dict[str, Any]]:
-        db_vehicles = [DimVehicle(**vehicle.dict()) for vehicle in vehicles.vehicles]
+        db_vehicles = [DimVehicle(**vehicle.model_dump()) for vehicle in vehicles.vehicles]
         self.db.add_all(db_vehicles)
         self.db.commit()
         
@@ -29,7 +29,7 @@ class BulkOperationsService:
         ]
 
     async def bulk_create_parts(self, parts: BulkCreatePart) -> List[Dict[str, Any]]:
-        db_parts = [DimParts(**part.dict()) for part in parts.parts]
+        db_parts = [DimParts(**part.model_dump()) for part in parts.parts]
         self.db.add_all(db_parts)
         self.db.commit()
         return [

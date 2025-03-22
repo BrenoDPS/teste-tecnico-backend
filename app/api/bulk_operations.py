@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import func, distinct
 from typing import List, Dict, Any
 from ..db.database import get_db
 from ..services.bulk_operations import BulkOperationsService
@@ -16,7 +15,7 @@ router = APIRouter(prefix="/api/v1", tags=["bulk_operations"])
 async def bulk_create_vehicles(
     vehicles: BulkCreateVehicle,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    _current_user: dict = Depends(get_current_active_user)
 ):
     """
     Cria múltiplos veículos em uma única operação.
@@ -29,7 +28,7 @@ async def bulk_create_vehicles(
 async def bulk_create_parts(
     parts: BulkCreatePart,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    _current_user: dict = Depends(get_current_active_user)
 ):
     """
     Cria múltiplas peças em uma única operação.
@@ -45,7 +44,7 @@ async def get_supplier_sales_analytics(
     start_date: str | None = None,
     end_date: str | None = None,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    _current_user: dict = Depends(get_current_active_user)
 ):
     """
     Retorna análise de vendas por fornecedor.
@@ -62,7 +61,7 @@ async def get_warranty_analytics_by_model(
     start_date: str | None = None,
     end_date: str | None = None,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    _current_user: dict = Depends(get_current_active_user)
 ):
     """
     Retorna análise de garantias por modelo de veículo.
@@ -81,7 +80,7 @@ async def get_transaction_analytics(
     supplier_id: int | None = None,
     model: str | None = None,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user)
+    _current_user: dict = Depends(get_current_active_user)
 ):
     """
     Retorna análise de transações (compras e garantias).
