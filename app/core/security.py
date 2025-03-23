@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from ..db.database import get_db
 from ..models.auth import User
 from .settings import settings
+from cryptography.fernet import Fernet
+from base64 import b64encode
 
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
@@ -57,4 +59,22 @@ async def get_current_active_user(
 ) -> User:
     if not current_user.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
-    return current_user 
+    return current_user
+
+def get_fernet():
+    key = b64encode(settings.SECRET_KEY.encode()[:32].ljust(32, b'0'))
+    return Fernet(key)
+
+def encrypt_value(value: str) -> str:
+    """Criptografa um valor usando Fernet"""
+    if not value:
+        return None
+    f = get_fernet()
+    return f.encrypt(value.encode()).decode()
+
+def decrypt_value(encrypted_value: str) -> str:
+    """Descriptografa um valor usando Fernet"""
+    if not encrypted_value:
+        return None
+    f = get_fernet()
+    return f.decrypt(encrypted_value.encode()).decode()

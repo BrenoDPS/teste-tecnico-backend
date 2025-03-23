@@ -5,7 +5,7 @@ API REST para gestão de suppliers, transações e analytics desenvolvida com Fa
 ## Requisitos
 
 - Python 3.8+
-- PostgreSQL
+- FastAPI
 - pip (gerenciador de pacotes Python)
 
 ## Configuração do Ambiente

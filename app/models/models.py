@@ -1,6 +1,11 @@
-from sqlalchemy import Column, Integer, String, Date, Enum, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from ..db.database import Base
+# criptografia para CPF
+from cryptography.fernet import Fernet
+from ..core.settings import settings
+from ..core.security import encrypt_value, decrypt_value
+
 
 class DimVehicle(Base):
     __tablename__ = "dim_vehicle"
@@ -30,10 +35,27 @@ class DimSupplier(Base):
     supplier_id = Column(Integer, primary_key=True, index=True)
     supplier_name = Column(String(50))
     location_id = Column(Integer, ForeignKey("dim_locations.location_id"))
+    _encrypted_cpf = Column("encrypted_cpf", String(255))
 
     location = relationship("DimLocations", back_populates="suppliers")
     parts = relationship("DimParts", back_populates="supplier")
 
+    @property
+    def cpf(self):
+        """Getter para o CPF descriptografado"""
+        if self._encrypted_cpf:
+            return decrypt_value(self._encrypted_cpf)
+        return None
+
+    @cpf.setter
+    def cpf(self, value: str):
+        """Setter para criptografar o CPF antes de salvar"""
+        if value:
+            self._encrypted_cpf = encrypt_value(value)
+        else:
+            self._encrypted_cpf = None
+
+            
 class DimLocations(Base):
     __tablename__ = "dim_locations"
 

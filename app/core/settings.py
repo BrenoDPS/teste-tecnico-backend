@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import List
+from pydantic import field_validator
 
 class Settings(BaseSettings):
     # API
@@ -63,5 +64,12 @@ class Settings(BaseSettings):
             "ALGORITHM": "HS256",
             "ACCESS_TOKEN_EXPIRE_MINUTES": "30"
         }
+
+        @field_validator("SECRET_KEY")
+        @classmethod
+        def validate_secret_key(cls, v):
+            if len(v.encode()) < 32:
+                raise ValueError("SECRET_KEY deve ter pelo menos 32 bytes")
+            return v
 
 settings = Settings()        
