@@ -127,3 +127,26 @@ Execute os testes com:
 ```bash
 pytest
 ``` 
+## Executando com Docker
+
+### Usando Docker Compose (recomendado)
+
+1. Construir e iniciar os containers:
+```bash
+docker-compose up --build
+```
+
+2. A API estará disponível em http://localhost:8000
+
+### Usando Docker diretamente
+
+1. Construir a imagem:
+```bash
+docker build -t warranty-api .
+```
+
+2. Executar o container:
+```bash
+docker run -p 8000:8000 warranty-api
+```
+```
