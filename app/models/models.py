@@ -1,10 +1,11 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Text
-from sqlalchemy.orm import relationship
-from ..db.database import Base
 # criptografia para CPF
 from cryptography.fernet import Fernet
+from sqlalchemy import Column, Date, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
+from ..core.security import decrypt_value, encrypt_value
 from ..core.settings import settings
-from ..core.security import encrypt_value, decrypt_value
+from ..db.database import Base
 
 
 class DimVehicle(Base):
@@ -18,6 +19,7 @@ class DimVehicle(Base):
 
     warranties = relationship("FactWarranties", back_populates="vehicle")
 
+
 class DimParts(Base):
     __tablename__ = "dim_parts"
 
@@ -28,6 +30,7 @@ class DimParts(Base):
 
     supplier = relationship("DimSupplier", back_populates="parts")
     warranties = relationship("FactWarranties", back_populates="part")
+
 
 class DimSupplier(Base):
     __tablename__ = "dim_supplier"
@@ -55,7 +58,7 @@ class DimSupplier(Base):
         else:
             self._encrypted_cpf = None
 
-            
+
 class DimLocations(Base):
     __tablename__ = "dim_locations"
 
@@ -68,6 +71,7 @@ class DimLocations(Base):
     suppliers = relationship("DimSupplier", back_populates="location")
     warranties = relationship("FactWarranties", back_populates="location")
 
+
 class DimPurchances(Base):
     __tablename__ = "dim_purchances"
 
@@ -77,6 +81,7 @@ class DimPurchances(Base):
     part_id = Column(Integer, ForeignKey("dim_parts.part_id"))
 
     warranties = relationship("FactWarranties", back_populates="purchance")
+
 
 class FactWarranties(Base):
     __tablename__ = "fact_warranties"
@@ -94,4 +99,4 @@ class FactWarranties(Base):
     vehicle = relationship("DimVehicle", back_populates="warranties")
     part = relationship("DimParts", back_populates="warranties")
     location = relationship("DimLocations", back_populates="warranties")
-    purchance = relationship("DimPurchances", back_populates="warranties") 
+    purchance = relationship("DimPurchances", back_populates="warranties")

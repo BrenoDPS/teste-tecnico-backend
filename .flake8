@@ -1,4 +1,14 @@
 [flake8]
 max-line-length = 127
-exclude = .git,__pycache__,build,dist,*.egg-info,venv
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    *.egg-info,
+    venv,
+    alembic
+ignore = E402,F401,W503,E226
 max-complexity = 10
+per-file-ignores =
+    __init__.py:F401

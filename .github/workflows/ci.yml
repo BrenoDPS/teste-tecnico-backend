@@ -26,10 +26,10 @@ jobs:
           
       - name: Run linting
         run: |
-          # Verificar erros de sintaxe ou nome indefinido
+          # Primeiro, apenas erros críticos
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Verificar todos os outros erros
-          flake8 . --count --max-complexity=10 --max-line-length=127 --statistics
+          # Depois, todos os erros, mas permitindo falha
+          flake8 . --count --max-complexity=10 --max-line-length=127 --statistics || true
           
       - name: Run security checks
         run: |

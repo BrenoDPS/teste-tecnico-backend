@@ -1,17 +1,18 @@
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from alembic import context
-
 import os
 import sys
+from logging.config import fileConfig
+
+from sqlalchemy import engine_from_config, pool
+
+from alembic import context
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importações necessárias para o metadata e configurações
 from app.core.settings import settings
 from app.db.database import Base
-from app.models.auth import User
 from app.models import models  # Importa todos os modelos para registrar no metadata
+from app.models.auth import User
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

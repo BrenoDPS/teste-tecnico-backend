@@ -1,19 +1,24 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+
 from ..core.security import (
-    verify_password,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
     create_access_token,
-    get_password_hash,
     get_current_active_user,
-    ACCESS_TOKEN_EXPIRE_MINUTES
+    get_password_hash,
+    verify_password,
 )
 from ..db.database import get_db
 from ..models.auth import User
-from ..schemas.auth import UserCreate, User as UserSchema, Token
+from ..schemas.auth import Token
+from ..schemas.auth import User as UserSchema
+from ..schemas.auth import UserCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
 
 @router.post("/register", response_model=UserSchema)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -22,9 +27,9 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email existente na base de dados"
+            detail="Email existente na base de dados",
         )
-    
+
     # Cria o novo usuário
     hashed_password = get_password_hash(user.password)
     db_user = User(
@@ -32,17 +37,17 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         username=user.username,
         hashed_password=hashed_password,
         is_active=user.is_active,
-        is_superuser=user.is_superuser
+        is_superuser=user.is_superuser,
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
+
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
     # Autentica o usuário
     user = db.query(User).filter(User.username == form_data.username).first()
@@ -52,7 +57,7 @@ async def login_for_access_token(
             detail="Usuario ou senha incorretos",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Cria o token de acesso
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
@@ -60,10 +65,10 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+
 @router.post("/logout")
 async def logout(
-    response: Response,
-    _current_user: dict = Depends(get_current_active_user)
+    response: Response, _current_user: dict = Depends(get_current_active_user)
 ):
     """
     Realiza o logout do usuário atual.
@@ -71,6 +76,7 @@ async def logout(
     """
     response.delete_cookie(key="access_token")
     return {"message": "Logout realizado com sucesso"}
+
 
 @router.get("/me", response_model=UserSchema)
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
