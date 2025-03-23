@@ -1,9 +1,10 @@
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from ..models.models import DimVehicle, DimParts, DimSupplier, DimLocations, DimPurchances, FactWarranties
+from sqlalchemy import func, case, distinct, literal
+from ..models.models import DimVehicle, DimParts, DimSupplier, DimPurchances, FactWarranties
 from ..schemas.bulk_operations import (
     BulkCreateVehicle, BulkCreatePart, BulkCreateSupplier,
+    BulkCreatePurchance, BulkCreateWarranty,
     DateRangeFilter, SupplierFilter, TransactionFilter
 )
 
@@ -11,7 +12,34 @@ class BulkOperationsService:
     def __init__(self, db: Session):
         self.db = db
 
-    async def bulk_create_vehicles(self, vehicles: BulkCreateVehicle) -> List[Dict[str, Any]]:
+    async def bulk_create_suppliers(self, suppliers: BulkCreateSupplier):
+        db_suppliers = [DimSupplier(**supplier.model_dump()) for supplier in suppliers.suppliers]
+        self.db.add_all(db_suppliers)
+        self.db.commit()
+        return [
+            {
+                "supplier_id": supplier.supplier_id,
+                "supplier_name": supplier.supplier_name,
+                "location_id": supplier.location_id
+            }
+            for supplier in db_suppliers
+        ]
+    
+    async def bulk_create_purchances(self, purchances: BulkCreatePurchance):
+        db_purchances = [DimPurchances(**purchance.model_dump()) for purchance in purchances.purchances]
+        self.db.add_all(db_purchances)
+        self.db.commit()
+        return [
+            {
+                "purchance_id": purchance.purchance_id,
+                "purchance_type": purchance.purchance_type,
+                "purchance_date": purchance.purchance_date,
+                "part_id": purchance.part_id
+            }
+            for purchance in db_purchances
+        ]
+
+    async def bulk_create_vehicles(self, vehicles: BulkCreateVehicle):
         db_vehicles = [DimVehicle(**vehicle.model_dump()) for vehicle in vehicles.vehicles]
         self.db.add_all(db_vehicles)
         self.db.commit()
@@ -28,7 +56,7 @@ class BulkOperationsService:
             for vehicle in db_vehicles
         ]
 
-    async def bulk_create_parts(self, parts: BulkCreatePart) -> List[Dict[str, Any]]:
+    async def bulk_create_parts(self, parts: BulkCreatePart):
         db_parts = [DimParts(**part.model_dump()) for part in parts.parts]
         self.db.add_all(db_parts)
         self.db.commit()
@@ -41,12 +69,29 @@ class BulkOperationsService:
             }
             for part in db_parts
         ]
+    
+    async def bulk_create_warranties(self, warranties: BulkCreateWarranty):
+        db_warranties = [FactWarranties(**warranty.model_dump()) for warranty in warranties.warranties]
+        self.db.add_all(db_warranties)
+        self.db.commit()
+        return [
+            {
+                "claim_key": warranty.claim_key,
+                "vehicle_id": warranty.vehicle_id,
+                "repair_date": warranty.repair_date,
+                "part_id": warranty.part_id,
+                "classifed_as": warranty.classifed_as,
+                "location_id": warranty.location_id,
+                "purchance_id": warranty.purchance_id
+            }
+            for warranty in db_warranties
+        ]
 
     async def get_supplier_sales_analytics(
         self,
         supplier_filter: SupplierFilter | None = None,
         date_range: DateRangeFilter | None = None
-    ) -> List[Dict[str, Any]]:
+    ):
         query = self.db.query(
             DimSupplier.supplier_id,
             DimSupplier.supplier_name,
@@ -87,7 +132,7 @@ class BulkOperationsService:
     async def get_warranty_analytics_by_model(
         self,
         date_range: DateRangeFilter | None = None
-    ) -> List[Dict[str, Any]]:
+    ):
         query = self.db.query(
             DimVehicle.model,
             func.count(FactWarranties.claim_key).label('total_warranties'),
@@ -112,47 +157,137 @@ class BulkOperationsService:
             for row in query.all()
         ]
 
-    async def get_transaction_analytics(
-        self,
-        transaction_filter: TransactionFilter | None = None
-    ) -> Dict[str, Any]:
-        purchases_query = self.db.query(
-            func.count(DimPurchances.purchance_id).label('total_count'),
-            DimPurchances.purchance_type
+    async def get_transaction_analytics(self, filter: TransactionFilter | None = None):
+        query = self.db.query(
+            DimPurchances.purchance_type,
+            func.count(DimPurchances.purchance_id).label('total_count')
         ).group_by(DimPurchances.purchance_type)
 
-        warranties_query = self.db.query(
-            func.count(FactWarranties.claim_key).label('total_count')
+        if filter:
+            if filter.start_date and filter.end_date:
+                query = query.filter(
+                    DimPurchances.purchance_date.between(filter.start_date, filter.end_date)
+                )
+            if filter.purchance_type:
+                query = query.filter(DimPurchances.purchance_type == filter.purchance_type)
+            if filter.part_id:
+                query = query.filter(DimPurchances.part_id == filter.part_id)
+
+        results = query.all()
+        return {
+            "transactions": [
+                {"type": r.purchance_type, "count": r.total_count}
+                for r in results
+            ]
+        }
+    
+    async def get_average_transactions_by_supplier(self, date_range: DateRangeFilter | None = None):
+        """Calcula a média de transações por fornecedor"""
+        query = self.db.query(
+            DimSupplier.supplier_id,
+            DimSupplier.supplier_name,
+            func.count(DimPurchances.purchance_id).label('total_transactions'),
+            func.count(
+                case(
+                    (DimPurchances.purchance_type == 'COMPRA', literal(1)),
+                    else_=literal(0)
+                )
+            ).label('total_purchases'),
+            func.count(
+                case(
+                    (DimPurchances.purchance_type == 'GARANTIA', literal(1)),
+                    else_=literal(0)
+                )
+            ).label('total_warranties')
+        ).join(
+            DimParts, DimSupplier.supplier_id == DimParts.supplier_id
+        ).join(
+            DimPurchances, DimParts.part_id == DimPurchances.part_id
+        ).group_by(
+            DimSupplier.supplier_id,
+            DimSupplier.supplier_name
         )
 
-        if transaction_filter:
-            if transaction_filter.date_range:
-                purchases_query = purchases_query.filter(
-                    DimPurchances.purchance_date.between(
-                        transaction_filter.date_range.start_date,
-                        transaction_filter.date_range.end_date
-                    )
-                )
-                warranties_query = warranties_query.filter(
-                    FactWarranties.repair_date.between(
-                        transaction_filter.date_range.start_date,
-                        transaction_filter.date_range.end_date
-                    )
-                )
+        if date_range:
+            query = query.filter(
+                DimPurchances.purchance_date.between(date_range.start_date, date_range.end_date)
+            )
 
-        purchases_result = purchases_query.all()
-        warranties_result = warranties_query.first()
-
-        purchances_by_type = {
-            row.purchance_type: {
-                "total_count": row.total_count
+        return [
+            {
+                "supplier_id": row.supplier_id,
+                "supplier_name": row.supplier_name,
+                "total_transactions": row.total_transactions,
+                "average_purchases": row.total_purchases,
+                "average_warranties": row.total_warranties,
+                "transaction_ratio": row.total_warranties / row.total_purchases if row.total_purchases > 0 else 0
             }
-            for row in purchases_result
-        }
+            for row in query.all()
+        ]
+    
+    async def get_transactions_by_model(self, date_range: DateRangeFilter | None = None):
+        """Analisa transações por modelo de veículo"""
+        query = self.db.query(
+            DimVehicle.model,
+            DimVehicle.year,
+            func.count(FactWarranties.claim_key).label('warranty_count'),
+            func.count(distinct(DimParts.part_id)).label('unique_parts'),
+            func.count(distinct(DimParts.supplier_id)).label('unique_suppliers')
+        ).join(
+            FactWarranties, DimVehicle.vehicle_id == FactWarranties.vehicle_id
+        ).join(
+            DimParts, FactWarranties.part_id == DimParts.part_id
+        ).group_by(
+            DimVehicle.model,
+            DimVehicle.year
+        )
 
-        return {
-            "purchases": purchances_by_type,
-            "warranties": {
-                "total_count": warranties_result.total_count if warranties_result else 0
+        if date_range:
+            query = query.filter(
+                FactWarranties.repair_date.between(date_range.start_date, date_range.end_date)
+            )
+
+        return [
+            {
+                "model": row.model,
+                "year": row.year,
+                "warranty_count": row.warranty_count,
+                "unique_parts": row.unique_parts,
+                "unique_suppliers": row.unique_suppliers
             }
-        } 
+            for row in query.all()
+        ]
+
+    async def get_part_performance_analytics(self, date_range: DateRangeFilter | None = None):
+        """Analisa o desempenho das peças baseado em garantias"""
+        query = self.db.query(
+            DimParts.part_id,
+            DimParts.part_name,
+            DimSupplier.supplier_name,
+            func.count(FactWarranties.claim_key).label('warranty_count'),
+            func.count(distinct(FactWarranties.classifed_as)).label('failure_types')
+        ).join(
+            DimSupplier, DimParts.supplier_id == DimSupplier.supplier_id
+        ).join(
+            FactWarranties, DimParts.part_id == FactWarranties.part_id
+        ).group_by(
+            DimParts.part_id,
+            DimParts.part_name,
+            DimSupplier.supplier_name
+        )
+
+        if date_range:
+            query = query.filter(
+                FactWarranties.repair_date.between(date_range.start_date, date_range.end_date)
+            )
+
+        return [
+            {
+                "part_id": row.part_id,
+                "part_name": row.part_name,
+                "supplier_name": row.supplier_name,
+                "warranty_count": row.warranty_count,
+                "failure_types": row.failure_types
+            }
+            for row in query.all()
+        ]

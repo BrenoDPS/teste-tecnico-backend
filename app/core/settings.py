@@ -17,7 +17,26 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # CORS
-    BACKEND_CORS_ORIGINS: List[str] = ["*"]  # Em produção, especifique os domínios permitidos
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "http://localhost:8080", "http://127.0.0.1:8080",    
+        ]
+    
+    # Métodos HTTP permitidos
+    ALLOWED_METHODS: List[str] = [
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+    ]
+    
+    # Headers permitidos
+    ALLOWED_HEADERS: List[str] = [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "X-Requested-With"
+    ]
     
     # Paginação
     DEFAULT_PAGE_SIZE: int = 100

@@ -1,5 +1,5 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from ..core.security import (
@@ -59,6 +59,18 @@ async def login_for_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/logout")
+async def logout(
+    response: Response,
+    _current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Realiza o logout do usuário atual.
+    Invalida o token atual removendo o cookie de autenticação.
+    """
+    response.delete_cookie(key="access_token")
+    return {"message": "Logout realizado com sucesso"}
 
 @router.get("/me", response_model=UserSchema)
 async def read_users_me(current_user: User = Depends(get_current_active_user)):

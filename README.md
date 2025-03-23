@@ -52,14 +52,15 @@ uvicorn app.main:app --reload
 ## Estrutura do Projeto
 
 ```
+alembic/            # Migrações no banco de dados feitas com Alembic
 app/
 ├── api/            # Rotas da API
 ├── core/           # Configurações centrais
 ├── db/             # Configuração do banco de dados
 ├── models/         # Modelos SQLAlchemy
 ├── schemas/        # Schemas Pydantic
-├── services/       # Lógica de negócios
-└── tests/          # Testes
+└── services/       # Lógica de negócios
+tests/              # Testes
 ```
 
 ## Funcionalidades
@@ -79,10 +80,46 @@ app/
 
 ## Segurança
 
-- Autenticação via JWT
-- Dados sensíveis criptografados
-- Configuração CORS
-- Validação de dados via Pydantic
+### Autenticação e Autorização
+
+O sistema utiliza um mecanismo robusto de autenticação e autorização baseado em JWT (JSON Web Tokens):
+
+1. **Registro e Login**:
+   - Endpoint `/api/v1/auth/register` para criar novos usuários
+   - Endpoint `/api/v1/auth/token` para autenticação e geração de token
+   - Endpoint `/api/v1/auth/logout` para invalidar o token atual
+   - Senhas são armazenadas com hash usando bcrypt
+
+2. **JWT (JSON Web Tokens)**:
+   - Tokens são assinados com algoritmo HS256
+   - Tempo de expiração configurável (padrão: 30 minutos)
+   - Payload inclui informações do usuário e claims padrão (exp, sub)
+   - Validação automática de tokens expirados
+
+3. **Proteção de Rotas**:
+   - Middleware de autenticação via `get_current_active_user`
+   - Verificação de tokens em todas as rotas protegidas
+   - Validação de usuários ativos
+   - Suporte a diferentes níveis de acesso (usuário normal/superusuário)
+
+### Proteção de Dados
+
+1. **Criptografia**:
+   - Senhas: Hash usando bcrypt com salt automático
+   - Dados sensíveis: Criptografia em nível de banco de dados
+   - Variáveis de ambiente para chaves secretas
+
+2. **CORS (Cross-Origin Resource Sharing)**:
+   - Configuração granular de origens permitidas
+   - Controle de métodos HTTP permitidos
+   - Gerenciamento de headers personalizados
+   - Suporte a credenciais em requisições cross-origin
+
+3. **Validação de Dados**:
+   - Schemas Pydantic para validação de entrada
+   - Sanitização automática de dados
+   - Tipagem forte em todas as operações
+   - Prevenção contra injeção SQL via SQLAlchemy
 
 ## Testes
 

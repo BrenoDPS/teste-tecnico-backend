@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import date
-from typing import Optional, List
+from typing import Optional
 
 # Schemas para Vehicle
 class VehicleBase(BaseModel):
@@ -66,7 +66,9 @@ class PurchanceCreate(PurchanceBase):
 
 class Purchance(PurchanceBase):
     purchance_id: int
-    model_config = ConfigDict(from_attributes=True)
+    
+    class Config:
+        from_attributes = True
 
 # Schemas para Warranty
 class WarrantyBase(BaseModel):
