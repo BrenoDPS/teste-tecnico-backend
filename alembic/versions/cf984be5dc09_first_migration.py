@@ -1,8 +1,8 @@
-"""Create initial tables
+"""first migration
 
-Revision ID: 28257ffb6f6e
+Revision ID: cf984be5dc09
 Revises: 
-Create Date: 2025-03-20 14:23:46.716853
+Create Date: 2025-03-22 21:51:07.024821
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '28257ffb6f6e'
+revision: str = 'cf984be5dc09'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -38,18 +38,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('vehicle_id')
     )
     op.create_index(op.f('ix_dim_vehicle_vehicle_id'), 'dim_vehicle', ['vehicle_id'], unique=False)
-    op.create_table('users',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('email', sa.String(), nullable=True),
-    sa.Column('username', sa.String(), nullable=True),
-    sa.Column('hashed_password', sa.String(), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('is_superuser', sa.Boolean(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
-    op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
-    op.create_index(op.f('ix_users_username'), 'users', ['username'], unique=True)
     op.create_table('dim_supplier',
     sa.Column('supplier_id', sa.Integer(), nullable=False),
     sa.Column('supplier_name', sa.String(length=50), nullable=True),
@@ -104,10 +92,6 @@ def downgrade() -> None:
     op.drop_table('dim_parts')
     op.drop_index(op.f('ix_dim_supplier_supplier_id'), table_name='dim_supplier')
     op.drop_table('dim_supplier')
-    op.drop_index(op.f('ix_users_username'), table_name='users')
-    op.drop_index(op.f('ix_users_id'), table_name='users')
-    op.drop_index(op.f('ix_users_email'), table_name='users')
-    op.drop_table('users')
     op.drop_index(op.f('ix_dim_vehicle_vehicle_id'), table_name='dim_vehicle')
     op.drop_table('dim_vehicle')
     op.drop_index(op.f('ix_dim_locations_location_id'), table_name='dim_locations')
